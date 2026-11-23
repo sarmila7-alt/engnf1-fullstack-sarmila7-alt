@@ -1,0 +1,34 @@
+{
+  "name": "engnf1-fullstack-sarmila7-alt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "dev": "node --watch src/server.js",
+  "start": "node src/server.js",
+  "migrate": "node src/db/migrate.js",
+  "seed": "node src/db/seed.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sarmila7-alt/engnf1-fullstack-sarmila7-alt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/sarmila7-alt/engnf1-fullstack-sarmila7-alt/issues"
+  },
+  "homepage": "https://github.com/sarmila7-alt/engnf1-fullstack-sarmila7-alt#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  }
+}
