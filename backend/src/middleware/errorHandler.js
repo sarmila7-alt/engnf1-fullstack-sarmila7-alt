@@ -19,3 +19,12 @@ export function errorHandler(err, req, res, next) {
   console.error(err);
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
 }
+if (err instanceof ZodError) {
+  const message = err.issues
+    .map((i) => (i.path.length ? `${i.path.join('.')}: ${i.message}` : i.message))
+    .join('; ');
+  return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message } });
+}
+if (err.type === 'entity.parse.failed' || err.type === 'entity.too.large') {
+  return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid or too large JSON body' } });
+}
