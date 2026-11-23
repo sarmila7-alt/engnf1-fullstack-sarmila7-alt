@@ -103,3 +103,63 @@ export async function listTickets({ status, category, priority, q, page, limit }
   const total = count.rows[0].n;
   return { data: rows.rows.map(toTicket), page, pageSize: limit, total, totalPages: Math.ceil(total / limit) };
 }
+const COLUMNS = { category: 'category', priority: 'priority', status: 'status', assigneeId: 'assignee_id' };
+
+export async function updateTicket(id, changes, actor) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query('SELECT * FROM tickets WHERE id = $1 FOR UPDATE', [id]);
+    const current = rows[0];
+    if (!current) throw new AppError(404, 'NOT_FOUND', 'Ticket not found');
+
+    if (changes.assigneeId) {
+      const user = await client.query('SELECT 1 FROM users WHERE id = $1', [changes.assigneeId]);
+      if (!user.rowCount) throw new AppError(404, 'NOT_FOUND', 'Assignee not found');
+    }
+
+    // Diff old vs new: only fields that really changed get an event
+    const sets = [];
+    const vals = [id];
+    const events = [];
+    for (const [field, column] of Object.entries(COLUMNS)) {
+      if (!(field in changes)) continue;
+      const oldValue = current[column];
+      const newValue = changes[field];
+      if (oldValue === newValue) continue;
+      vals.push(newValue);
+      sets.push(`${column} = $${vals.length}`);
+      events.push([field,
+        oldValue == null ? null : String(oldValue),
+        newValue == null ? null : String(newValue)]);
+    }
+
+    const categoryChanged = events.some(([f]) => f === 'category');
+    const leftOpen = changes.status !== undefined && current.status === 'OPEN' && changes.status !== 'OPEN';
+    if (categoryChanged) sets.push('is_human_override = true');
+    if (('category' in changes || leftOpen) && !current.is_reviewed) sets.push('is_reviewed = true');
+
+    let ticketRow = current;
+    if (sets.length) {
+      sets.push('updated_at = now()');
+      const updated = await client.query(
+        `UPDATE tickets SET ${sets.join(', ')} WHERE id = $1 RETURNING *`, vals);
+      ticketRow = updated.rows[0];
+      for (const [field, oldV, newV] of events) {
+        await client.query(
+          `INSERT INTO ticket_events (ticket_id, field, old_value, new_value, actor)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [id, field, oldV, newV, actor]);
+      }
+    }
+
+    const eventsOut = await loadEvents(client, id);
+    await client.query('COMMIT');
+    return { ticket: toTicket(ticketRow), events: eventsOut };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
