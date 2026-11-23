@@ -55,3 +55,51 @@ export async function importTickets(items) {
     client.release();
   }
 }
+
+export async function ticketExists(id) {
+  const { rowCount } = await pool.query('SELECT 1 FROM tickets WHERE id = $1', [id]);
+  if (!rowCount) throw new AppError(404, 'NOT_FOUND', 'Ticket not found');
+}
+
+async function loadEvents(db, ticketId) {
+  const { rows } = await db.query(
+    'SELECT * FROM ticket_events WHERE ticket_id = $1 ORDER BY created_at DESC, id DESC', [ticketId]);
+  return rows.map(toEvent);
+}
+
+export async function getTicket(id) {
+  const { rows } = await pool.query('SELECT * FROM tickets WHERE id = $1', [id]);
+  if (!rows[0]) throw new AppError(404, 'NOT_FOUND', 'Ticket not found');
+  return { ticket: toTicket(rows[0]), events: await loadEvents(pool, id) };
+}
+
+export async function listTickets({ status, category, priority, q, page, limit }) {
+  const where = [];
+  const vals = [];
+  const add = (sql, value) => { vals.push(value); where.push(sql.replace('?', `$${vals.length}`)); };
+
+  if (status) add('status = ?', status);
+  if (category) add('category = ?', category);
+  if (priority) add('priority = ?', priority);
+  if (q) {
+    // Escape LIKE wildcards so "%" and "_" are searched literally
+    const pattern = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+    vals.push(pattern);
+    where.push(`(subject ILIKE $${vals.length} OR body ILIKE $${vals.length})`);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const offset = (page - 1) * limit;
+
+  const [count, rows] = await Promise.all([
+    pool.query(`SELECT count(*)::int AS n FROM tickets ${whereSql}`, vals),
+    pool.query(
+      `SELECT * FROM tickets ${whereSql}
+       ORDER BY created_at DESC, id DESC
+       LIMIT $${vals.length + 1} OFFSET $${vals.length + 2}`,
+      [...vals, limit, offset]),
+  ]);
+
+  const total = count.rows[0].n;
+  return { data: rows.rows.map(toTicket), page, pageSize: limit, total, totalPages: Math.ceil(total / limit) };
+}
