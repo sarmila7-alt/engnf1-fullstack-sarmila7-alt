@@ -46,8 +46,24 @@ const tickets = [
     'BUG', 'BUG', false, 'URGENT', 'OPEN', false],
   ['EXT-1009', 'Typo on pricing page', 'The word "monthly" is misspelled in the pricing table.',
     'FEATURE_REQUEST', 'FEATURE_REQUEST', false, 'LOW', 'RESOLVED', true],
-  // TODO: add 6+ more so you reach 15+ and cover every category/priority/status spread
+  ['EXT-1010', 'Invoice PDF will not download', 'The invoice download button shows an error.',
+    'BILLING', 'BILLING', false, 'HIGH', 'IN_PROGRESS', true],
+  ['EXT-1011', 'Two factor code never arrives', 'My 2FA code does not come by SMS so I cannot log in.',
+    'LOGIN', 'LOGIN', false, 'MEDIUM', 'OPEN', false],
+  ['EXT-1012', 'Parcel stuck in transit', 'Tracking has shown the same status for ten days.',
+    'DELIVERY', 'DELIVERY', false, 'MEDIUM', 'OPEN', false],
+  ['EXT-1013', 'Wrong item delivered', 'The delivery contained a different product than I ordered.',
+    'DELIVERY', 'DELIVERY', false, 'MEDIUM', 'RESOLVED', true],
+  ['EXT-1014', 'Export report to CSV', 'Please let us export the weekly report to CSV for our finance team.',
+    'FEATURE_REQUEST', 'FEATURE_REQUEST', false, 'LOW', 'OPEN', false],
+  ['EXT-1015', 'Dashboard layout looks broken', 'The dashboard is broken on mobile and the charts overlap.',
+    'BUG', 'BUG', false, 'MEDIUM', 'IN_PROGRESS', false],
+  ['EXT-1016', 'Urgent: payment page times out', 'Urgent, the payment page times out for every customer.',
+    'BILLING', 'BILLING', false, 'URGENT', 'OPEN', false],
+  ['EXT-1017', 'Password reset email was late', 'The reset email arrived late but the issue is now solved.',
+    'LOGIN', 'LOGIN', false, 'MEDIUM', 'CLOSED', true],
 ];
+
 for (const t of tickets) {
   await pool.query(
     `INSERT INTO tickets (external_id, subject, body, auto_category, category,
