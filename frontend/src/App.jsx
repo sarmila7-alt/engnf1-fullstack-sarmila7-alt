@@ -8,6 +8,8 @@ import TriageQueuePage from './pages/TriageQueuePage.jsx';
 import TicketDetailPage from './pages/TicketDetailPage.jsx';
 import ResourcesPage from './pages/ResourcesPage.jsx';
 import ResourceDetailPage from './pages/ResourceDetailPage.jsx';
+import MyBookingsPage from './pages/MyBookingsPage.jsx';
+import AdminResourcesPage from './pages/AdminResourcesPage.jsx';
 
 function NotFoundPage() {
   return (
@@ -57,6 +59,22 @@ export default function App() {
             path="resources/:id"
             element={<ResourceDetailPage />}
           />
+
+          {/* Personal bookings */}
+          <Route
+            path="bookings"
+            element={<MyBookingsPage />}
+          />
+
+          {/* Admin-only routes */}
+          <Route element={<RequireAuth role="ADMIN" />}>
+
+            <Route
+              path="admin/resources"
+              element={<AdminResourcesPage />}
+            />
+
+          </Route>
 
           {/* Invalid routes */}
           <Route path="*" element={<NotFoundPage />} />
