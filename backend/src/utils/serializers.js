@@ -27,3 +27,27 @@ export const toEvent = (r) => ({
   actor: r.actor,
   createdAt: r.created_at,
 });
+export const toResource = (r) => ({
+  id: r.id,
+  name: r.name,
+  type: r.type,
+  capacity: r.capacity,
+  description: r.description,
+  isActive: r.is_active,
+  createdAt: r.created_at,
+});
+
+// resourceName is an extra, additive field so the UI can show a name without a second request
+export const toBooking = (r) => ({
+  id: r.id,
+  resourceId: r.resource_id,
+  userId: r.user_id,
+  ticketId: r.ticket_id,
+  startTime: r.start_time,
+  endTime: r.end_time,
+  purpose: r.purpose,
+  status: r.status,
+  decisionNote: r.decision_note,
+  createdAt: r.created_at,
+  resourceName: r.resource_name,
+});
