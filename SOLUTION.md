@@ -79,26 +79,30 @@ One limitation to verify against the final code and specification: the inspected
 
 ## Part C — Measure First, Then Optimise
 
-Endpoint: `GET /api/tickets?limit=100` on a dataset of at least 500 tickets.
+Endpoint: `GET /api/tickets?limit=100`.
+
+The benchmark used the local Express API connected to the existing Neon PostgreSQL database. 500 synthetic tickets were inserted, bringing the total to 517. The same authenticated endpoint was warmed up with three requests and measured with 20 sequential PowerShell requests per run, using `Measure-Command`.
 
 | Measurement | Before | After |
-|---|---|---|
-| Ticket count | Not supplied | Not supplied |
-| Median latency (ms) | Not supplied | Not supplied |
-| P95 latency (ms) | Not supplied | Not supplied |
-| Optimization applied | — | Not supplied |
+|---|---:|---:|
+| Ticket count | 517 | 517 |
+| Mean latency (ms) | 461.07 | 346.40 |
+| Minimum latency (ms) | 285.65 | 279.03 |
+| Maximum latency (ms) | 1017.49 | 551.10 |
 
-Testing was reported complete, but actual benchmark measurements were not provided. No numerical performance improvement is claimed.
+Mean latency decreased by 114.67 ms (24.87%). The second run's count was not included in the pasted output; the instructed procedure used 20 requests. Median and P95 were not captured.
 
-The inspected `listTickets()` already uses pagination, parameterized filters and parallel count/data queries. The initial migration does not show an explicit composite index for the ticket list ordering. A candidate optimization is:
+The `listTickets()` service already uses pagination, parameterized filters and parallel count/data queries. The optimization tested was a composite index matching the list query's sort order, followed by refreshed table statistics:
 
 ```sql
-CREATE INDEX tickets_created_id_idx ON tickets (created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS tickets_created_id_idx
+ON tickets (created_at DESC, id DESC);
+ANALYZE tickets;
 ```
 
-This is a proposed experiment, not a claim that the index was applied. Benchmark on an isolated database with 500+ tickets, identical authentication, dataset, query and hosting conditions. Warm up the endpoint, collect repeated requests before and after the change, and compare median and P95 latency. Inspect `EXPLAIN (ANALYZE, BUFFERS)` for the list query. Record actual results here.
+The index can reduce sorting work for ordered page retrieval, but increases storage and write maintenance costs. It does not necessarily accelerate the separate total count or substring searches. PostgreSQL may still prefer a sequential scan for small tables. The measured improvement is an end-to-end observation, not proof that the index alone caused it: network latency, caching and refreshed statistics may contribute. No execution plan was captured to verify index usage.
 
-Trade-off: the index can reduce sorting work for ordered page retrieval, but increases storage and write maintenance costs. It does not necessarily accelerate the separate total count or substring searches. At small dataset sizes PostgreSQL may prefer a sequential scan.
+For reproducibility, retain the index definition in a database migration and repeat the benchmark on an isolated database if further validation is needed. Synthetic tickets should be removed after testing.
 
 ## Part D — Improvements with one more day
 
@@ -112,6 +116,6 @@ Trade-off: the index can reduce sorting work for ordered page retrieval, but inc
 
 ### Deployment and verification notes
 
-The frontend and backend were deployed on Vercel and Render, respectively, with Neon PostgreSQL. Deployment issues included a case-sensitive filename mismatch and a CORS origin with a trailing slash. Both were corrected, and live login was reported working. The developer subsequently reported completion of testing. Detailed production test outputs and performance measurements were not supplied.
+The frontend and backend were deployed on Vercel and Render, respectively, with Neon PostgreSQL. Deployment issues included a case-sensitive filename mismatch and a CORS origin with a trailing slash. Both were corrected, and live login was reported working. The developer subsequently reported completion of testing. Detailed production test outputs were not supplied. The local API performance measurements are recorded in Part C.
 
 Before treating the application as production-ready, rotate default administrator credentials, verify backend authorization independently and retain benchmark and regression-test evidence.
